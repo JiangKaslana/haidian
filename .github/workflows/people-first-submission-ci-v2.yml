@@ -1,0 +1,123 @@
+name: people-first-submission-ci-v2
+
+on:
+  push:
+    branches:
+      - agent/people-first-jingzhang-ci-v2
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact CI branch head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /brief/
+            /data/
+            /sources/
+            /scenarios/
+            /skills/
+            /submissions/JiangKaslana/jingzhang-people-ai-city/
+            /tracks.json
+            /requirements-review.txt
+
+      - name: Fetch fork main for scope preflight
+        run: git fetch --depth=1 origin main:refs/remotes/origin/main
+
+      - name: Install trusted review dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check -r requirements-review.txt
+          python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
+
+      - name: Generate authentic scaffold baseline and finalize package
+        id: finalize
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          rm -rf /tmp/scaffoldrepo /tmp/people-first-ci
+          cp -a . /tmp/scaffoldrepo
+          rm -rf /tmp/scaffoldrepo/submissions/JiangKaslana/jingzhang-people-ai-city
+          (
+            cd /tmp/scaffoldrepo
+            python3 scripts/scaffold_ai_submission.py \
+              submissions/JiangKaslana/jingzhang-people-ai-city \
+              --stage formal \
+              --agent-id JiangKaslana \
+              --agent-name 'GPT-5.6 Sol for JiangKaslana' \
+              --proposal-title '京张人民智城：百年铁路上的人民AI共同体'
+          )
+          cp /tmp/scaffoldrepo/submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json \
+             submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('submissions/JiangKaslana/jingzhang-people-ai-city')
+          agent = json.loads((root/'agent.json').read_text(encoding='utf-8'))
+          manifest_path = root/'manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          for key in ('agent_id','agent_name','model','model_family','model_detail'):
+              manifest['agent'][key] = agent[key]
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          python3 scripts/finalize_submission.py submissions/JiangKaslana/jingzhang-people-ai-city 2>&1 | tee /tmp/finalize.log
+          mkdir -p /tmp/people-first-ci
+          cp submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json /tmp/people-first-ci/manifest.json
+          cp /tmp/finalize.log /tmp/people-first-ci/finalize.log
+
+      - name: Run official four-gate self-check
+        id: selfcheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/self_check_submission.py \
+            submissions/JiangKaslana/jingzhang-people-ai-city \
+            --pr-author JiangKaslana \
+            --mark-self-checked \
+            --json 2>&1 | tee /tmp/selfcheck.log
+          mkdir -p /tmp/people-first-ci
+          cp submissions/JiangKaslana/jingzhang-people-ai-city/self_check.json /tmp/people-first-ci/self_check.json || true
+          cp submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json /tmp/people-first-ci/manifest.after-selfcheck.json || true
+          cp /tmp/selfcheck.log /tmp/people-first-ci/selfcheck.log
+
+      - name: Run participant preflight
+        id: preflight
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/participant_preflight.py \
+            submissions/JiangKaslana/jingzhang-people-ai-city \
+            --pr-author JiangKaslana \
+            --check-push 2>&1 | tee /tmp/preflight.log
+          mkdir -p /tmp/people-first-ci
+          cp /tmp/preflight.log /tmp/people-first-ci/preflight.log
+
+      - name: Record exact CI state
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/people-first-ci
+          git rev-parse HEAD > /tmp/people-first-ci/ci-head.txt
+          git status --short > /tmp/people-first-ci/git-status.txt
+          printf 'finalize=%s\nselfcheck=%s\npreflight=%s\n' \
+            '${{ steps.finalize.outcome }}' '${{ steps.selfcheck.outcome }}' '${{ steps.preflight.outcome }}' \
+            > /tmp/people-first-ci/step-outcomes.txt
+
+      - name: Upload self-check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: people-first-submission-ci-v2-${{ github.sha }}
+          path: /tmp/people-first-ci/
+          if-no-files-found: warn
