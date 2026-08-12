@@ -1,4 +1,4 @@
-name: people-first-latest-upstream-release-check
+name: people-first-newest-upstream-release-check
 
 on:
   push:
