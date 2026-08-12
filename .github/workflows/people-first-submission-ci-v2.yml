@@ -1,4 +1,4 @@
-name: people-first-final-preflight-pass
+name: people-first-latest-upstream-release-check
 
 on:
   push:
@@ -9,9 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  preflight:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout exact release branch
         uses: actions/checkout@v4
@@ -31,18 +31,27 @@ jobs:
             /tracks.json
             /requirements-review.txt
 
-      - name: Fetch merge parents and latest fork main
+      - name: Fetch merge parents and fork main
         run: |
           git fetch --deepen=2 origin agent/people-first-jingzhang
           git fetch --depth=1 origin main:refs/remotes/origin/main
-          git merge-base origin/main HEAD
+          echo "release=$(git rev-parse HEAD)"
+          echo "main=$(git rev-parse origin/main)"
+          echo "merge_base=$(git merge-base origin/main HEAD)"
 
       - name: Install review dependencies
         run: |
           python3 -m pip install --disable-pip-version-check -r requirements-review.txt
           python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
 
-      - name: Run participant preflight
+      - name: Re-run official four-gate self-check on persisted package
+        run: |
+          python3 scripts/self_check_submission.py \
+            submissions/JiangKaslana/jingzhang-people-ai-city \
+            --pr-author JiangKaslana \
+            --json
+
+      - name: Run final participant preflight
         run: |
           python3 scripts/participant_preflight.py \
             submissions/JiangKaslana/jingzhang-people-ai-city \
