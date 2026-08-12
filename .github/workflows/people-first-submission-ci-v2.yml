@@ -1,4 +1,4 @@
-name: people-first-final-selfcheck-diagnosis
+name: people-first-final-preflight-pass
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,9 +42,9 @@ jobs:
           python3 -m pip install --disable-pip-version-check -r requirements-review.txt
           python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
 
-      - name: Run exact current self-check without mutation
+      - name: Run participant preflight
         run: |
-          python3 scripts/self_check_submission.py \
+          python3 scripts/participant_preflight.py \
             submissions/JiangKaslana/jingzhang-people-ai-city \
             --pr-author JiangKaslana \
-            --json
+            --check-push
