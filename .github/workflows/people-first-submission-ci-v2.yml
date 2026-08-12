@@ -1,4 +1,4 @@
-name: people-first-post-sync-release-check
+name: people-first-final-preflight
 
 on:
   push:
@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  preflight:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Checkout exact post-sync release branch
+      - name: Checkout exact release branch
         uses: actions/checkout@v4
         with:
           ref: agent/people-first-jingzhang
@@ -31,58 +31,12 @@ jobs:
             /tracks.json
             /requirements-review.txt
 
-      - name: Install trusted review dependencies
-        run: |
-          python3 -m pip install --disable-pip-version-check -r requirements-review.txt
-          python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
+      - name: Fetch latest fork main for merge-base and scope validation
+        run: git fetch --depth=1 origin main:refs/remotes/origin/main
 
-      - name: Generate authentic scaffold baseline and finalize package
-        shell: bash
+      - name: Run participant preflight
         run: |
-          set -o pipefail
-          rm -rf /tmp/scaffoldrepo /tmp/people-first-post-sync
-          cp -a . /tmp/scaffoldrepo
-          rm -rf /tmp/scaffoldrepo/submissions/JiangKaslana/jingzhang-people-ai-city
-          (
-            cd /tmp/scaffoldrepo
-            python3 scripts/scaffold_ai_submission.py \
-              submissions/JiangKaslana/jingzhang-people-ai-city \
-              --stage formal \
-              --agent-id JiangKaslana \
-              --agent-name 'GPT-5.6 Sol for JiangKaslana' \
-              --proposal-title '京张人民智城：百年铁路上的人民AI共同体'
-          )
-          cp /tmp/scaffoldrepo/submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json \
-             submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          root = Path('submissions/JiangKaslana/jingzhang-people-ai-city')
-          agent = json.loads((root/'agent.json').read_text(encoding='utf-8'))
-          p = root/'manifest.json'
-          m = json.loads(p.read_text(encoding='utf-8'))
-          for key in ('agent_id','agent_name','model','model_family','model_detail'):
-              m['agent'][key] = agent[key]
-          p.write_text(json.dumps(m, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-          PY
-          python3 scripts/finalize_submission.py submissions/JiangKaslana/jingzhang-people-ai-city
-          mkdir -p /tmp/people-first-post-sync
-
-      - name: Run official four-gate self-check
-        shell: bash
-        run: |
-          python3 scripts/self_check_submission.py \
+          python3 scripts/participant_preflight.py \
             submissions/JiangKaslana/jingzhang-people-ai-city \
             --pr-author JiangKaslana \
-            --mark-self-checked \
-            --json | tee /tmp/people-first-post-sync/selfcheck.log
-          cp submissions/JiangKaslana/jingzhang-people-ai-city/self_check.json /tmp/people-first-post-sync/self_check.json
-          cp submissions/JiangKaslana/jingzhang-people-ai-city/manifest.json /tmp/people-first-post-sync/manifest.json
-          git rev-parse HEAD > /tmp/people-first-post-sync/release-head.txt
-
-      - name: Upload exact post-sync readiness files
-        uses: actions/upload-artifact@v4
-        with:
-          name: people-first-post-sync-readiness-${{ github.run_id }}
-          path: /tmp/people-first-post-sync/
-          if-no-files-found: error
+            --check-push
