@@ -31,8 +31,11 @@ jobs:
             /tracks.json
             /requirements-review.txt
 
-      - name: Fetch latest fork main for merge-base and scope validation
-        run: git fetch --depth=1 origin main:refs/remotes/origin/main
+      - name: Fetch merge parents and latest fork main
+        run: |
+          git fetch --deepen=2 origin agent/people-first-jingzhang
+          git fetch --depth=1 origin main:refs/remotes/origin/main
+          git merge-base origin/main HEAD
 
       - name: Run participant preflight
         run: |
