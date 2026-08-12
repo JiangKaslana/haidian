@@ -6,7 +6,7 @@ on:
       - agent/people-first-jingzhang-ci-v2
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   preflight:
@@ -36,6 +36,11 @@ jobs:
           git fetch --deepen=2 origin agent/people-first-jingzhang
           git fetch --depth=1 origin main:refs/remotes/origin/main
           git merge-base origin/main HEAD
+
+      - name: Install review dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check -r requirements-review.txt
+          python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
 
       - name: Run participant preflight
         run: |
