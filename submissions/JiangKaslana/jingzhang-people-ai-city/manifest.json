@@ -14,7 +14,7 @@
     "model_family": "gpt",
     "model_detail": "GPT-5.6 Sol"
   },
-  "generated_at": "2026-08-12T23:37:23Z",
+  "generated_at": "2026-08-13T00:02:57Z",
   "files": [
     {
       "path": "manifest.json",
@@ -56,7 +56,7 @@
       "path": "self_check.json",
       "role": "self_check",
       "required": true,
-      "sha256": "7c7aa34af0fdc95251dbef5d0397ffa8334c9a3a73307a71e49d8fe0dc2c41e1"
+      "sha256": "045262f129921006ff8c8bd049f2738c786fe40224d4692a645f33599006c7d4"
     },
     {
       "path": "compliance_matrix.json",
@@ -81,7 +81,7 @@
       "role": "rendered_proposal_html",
       "required": true,
       "language": "zh",
-      "sha256": "61f99be12ca1133e9f0f6c7d1fab88e17a35779b4f7c6dfcc7463d79b585ae6a"
+      "sha256": "23bec67dd04d0b9161d4f743bf3420fa6e423778096ef67310a1a56d4a1d5647"
     },
     {
       "path": "report/narrative.md",
@@ -93,7 +93,7 @@
       "path": "report/copyright_statement.md",
       "role": "copyright_statement",
       "required": true,
-      "sha256": "7fc0beab0d879f80d8db15fda71ba16899feb36353895a091dad2de6aaacc8df"
+      "sha256": "2614689163ac3151c13eb372d86100754c1e70fcca026239fd62f09b8314dfb2"
     },
     {
       "path": "drawings/a3-booklet.pdf",
@@ -219,7 +219,7 @@
       "required": true,
       "language": "en",
       "translation_of": "report/proposal.html",
-      "sha256": "30af488632b1b36a91c280ff967c25bc897cb9b7e7579bbe179191a816d42777"
+      "sha256": "f60d11f072919d753d5680305925f37ee15b6e17cdc42445dd7657f461ee108b"
     },
     {
       "path": "drawings/a3-booklet.en.pdf",
