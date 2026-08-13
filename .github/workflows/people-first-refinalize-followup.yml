@@ -1,0 +1,123 @@
+name: people-first-refinalize-followup
+
+on:
+  push:
+    branches:
+      - agent/people-first-jingzhang-ci
+
+permissions:
+  contents: write
+
+jobs:
+  refinalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUBMISSION_DIR: submissions/JiangKaslana/jingzhang-people-ai-city
+    steps:
+      - name: Checkout formal follow-up branch sparsely
+        uses: actions/checkout@v4
+        with:
+          ref: agent/people-first-jingzhang
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /brief
+            /data
+            /docs
+            /schema
+            /scripts
+            /skills
+            /scenarios
+            /sources
+            /templates
+            /tracks.json
+            /requirements-review.txt
+            /submissions/JiangKaslana/jingzhang-people-ai-city
+
+      - name: Install review dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check -r requirements-review.txt
+          python3 -m pip install --disable-pip-version-check --quiet 'jsonschema==4.25.1'
+
+      - name: Generate authentic scaffold baseline manifest
+        run: |
+          set -euxo pipefail
+          BASE="$RUNNER_TEMP/scaffold-baseline"
+          mkdir -p "$BASE"
+          rsync -a --exclude='.git' ./ "$BASE/"
+          rm -rf "$BASE/$SUBMISSION_DIR"
+          cd "$BASE"
+          python3 scripts/scaffold_ai_submission.py "$SUBMISSION_DIR" \
+            --stage formal \
+            --agent-id JiangKaslana \
+            --agent-name "GPT-5.6 Sol for JiangKaslana" \
+            --proposal-title "京张人民智城：百年铁路上的人民AI共同体"
+          cp "$BASE/$SUBMISSION_DIR/manifest.json" "$GITHUB_WORKSPACE/$SUBMISSION_DIR/manifest.json"
+
+      - name: Sync declared agent identity into baseline manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('submissions/JiangKaslana/jingzhang-people-ai-city')
+          agent = json.loads((root/'agent.json').read_text(encoding='utf-8'))
+          manifest = json.loads((root/'manifest.json').read_text(encoding='utf-8'))
+          target = manifest.setdefault('agent', {})
+          for key in ('agent_id','agent_name','model','model_family','model_detail'):
+              if key in agent:
+                  target[key] = agent[key]
+          (root/'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+
+      - name: Finalize against current scaffold
+        run: |
+          python3 scripts/finalize_submission.py "$SUBMISSION_DIR"
+
+      - name: Persist four-gate self-check
+        run: |
+          python3 scripts/self_check_submission.py "$SUBMISSION_DIR" \
+            --pr-author JiangKaslana \
+            --mark-self-checked \
+            --json | tee /tmp/self-check.json
+
+      - name: Explicit spatial review
+        run: python3 scripts/spatial_review.py "$SUBMISSION_DIR" --repo-root . --json
+
+      - name: Explicit visual review
+        run: python3 scripts/visual_review.py "$SUBMISSION_DIR" --json
+
+      - name: Explicit professional evidence review
+        run: python3 scripts/professional_review.py "$SUBMISSION_DIR" --repo-root . --json
+
+      - name: Strict manifest schema
+        run: |
+          python3 scripts/validate_manifest_schema.py \
+            --repo-root . \
+            --manifest "$SUBMISSION_DIR/manifest.json" \
+            --strict --json
+
+      - name: Commit refreshed readiness evidence
+        run: |
+          set -euxo pipefail
+          git config user.name 'JiangKaslana'
+          git config user.email '130233273+JiangKaslana@users.noreply.github.com'
+          git add "$SUBMISSION_DIR/manifest.json" "$SUBMISSION_DIR/self_check.json"
+          if git diff --cached --quiet; then
+            echo 'No readiness changes.'
+          else
+            git commit -m 'chore: refresh readiness after official HTML render'
+          fi
+
+      - name: Participant preflight with push dry-run
+        run: |
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/open-city-ai/haidian.git
+          python3 scripts/participant_preflight.py "$SUBMISSION_DIR" \
+            --pr-author JiangKaslana \
+            --repo-root . \
+            --check-push \
+            --json | tee /tmp/participant-preflight.json
+
+      - name: Push refreshed readiness to follow-up branch
+        run: git push origin HEAD:agent/people-first-jingzhang
